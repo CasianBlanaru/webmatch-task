@@ -1,39 +1,19 @@
-{
-	{$SERVER_NAME:":8080"}
-}
-
 # Shopware 6 / Symfony application served via FrankenPHP
-{$SERVER_NAME:":8080"} {
-	# Set the document root to the public directory
+{$SERVER_NAME:localhost:8080} {
 	root * /app/public
-
-	# Enable FrankenPHP worker mode for Symfony/Shopware
 	php_server {
 		index index.php
 	}
-
-	# Serve static files directly, fall back to PHP for everything else
 	file_server
-
-	# Compress responses
 	encode zstd br gzip
-
-	# Security headers
 	header {
-		# Prevent MIME type sniffing
 		X-Content-Type-Options nosniff
-		# Prevent clickjacking
 		X-Frame-Options SAMEORIGIN
-		# Remove Server header
 		-Server
 	}
-
-	# Handle errors
 	handle_errors {
 		respond "{err.status_code} {err.status_text}" {err.status_code}
 	}
-
-	# Logging
 	log {
 		output stderr
 		format console
