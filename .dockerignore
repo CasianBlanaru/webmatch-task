@@ -1,0 +1,12 @@
+vendor
+node_modules
+var/cache
+var/log
+public/media
+public/thumbnail
+.git
+.github
+.idea
+.vscode
+.env.local
+.DS_Store
