@@ -55,6 +55,7 @@ FROM base AS app
 COPY . .
 COPY --from=vendor /app/vendor ./vendor
 COPY Caddyfile /etc/caddy/Caddyfile
+COPY docker/railway-entrypoint.sh /usr/local/bin/railway-entrypoint
 
 RUN composer install \
     --no-dev \
@@ -74,6 +75,8 @@ RUN mkdir -p \
     public/theme \
     && chown -R www-data:www-data var public
 
+RUN chmod +x /usr/local/bin/railway-entrypoint
+
 EXPOSE 8080
 
-CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]
+CMD ["railway-entrypoint"]
