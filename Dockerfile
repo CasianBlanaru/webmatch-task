@@ -4,22 +4,20 @@ ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 
 WORKDIR /var/www/html
 
-# Apache public dir
+# Apache document root -> public
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
     /etc/apache2/sites-available/*.conf
 
-# Remove ALL MPM modules first
-RUN rm -f /etc/apache2/mods-enabled/mpm_*.load
-RUN rm -f /etc/apache2/mods-enabled/mpm_*.conf
+# Remove conflicting MPM modules
+RUN a2dismod mpm_event || true
+RUN a2dismod mpm_worker || true
 
-# Enable ONLY prefork
-RUN a2enmod mpm_prefork
-RUN a2enmod rewrite
-RUN a2enmod headers
+# Enable required Apache modules only
+RUN a2enmod rewrite headers
 
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Packages
+# PHP dependencies
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -36,34 +34,32 @@ RUN apt-get update && apt-get install -y \
         pdo_mysql \
         intl \
         zip \
-        gd
+        gd \
+    && rm -rf /var/lib/apt/lists/*
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# App
+# Copy app
 COPY . .
 
+# Install PHP deps
 RUN composer install \
     --no-dev \
     --no-scripts \
     --prefer-dist \
     --optimize-autoloader
 
+# Writable directories
 RUN mkdir -p \
     var/cache \
     var/log \
     public/media \
     public/thumbnail \
     public/bundles \
-    public/theme
-
-RUN chown -R www-data:www-data var public
-
-# Start script
-RUN printf '#!/bin/bash\napache2-foreground\n' > /usr/local/bin/start \
-    && chmod +x /usr/local/bin/start
+    public/theme \
+    && chown -R www-data:www-data var public
 
 EXPOSE 80
 
-CMD ["start"]
+CMD ["apache2-foreground"]
