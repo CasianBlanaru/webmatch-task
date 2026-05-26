@@ -2,139 +2,161 @@
 
 Small Shopware 6 plugin for the hiring task.
 
-The plugin lives in `custom/plugins/WbmProductAttributes`. I worked against the code in this repository, where `shopware/core` is pinned to `v6.7.10.1`. The task mentions 6.7.9.x, so the plugin constraint allows `~6.7.9 || ~6.7.10`.
+The plugin lives in custom/plugins/WbmProductAttributes.  
+I worked against the code in this repository where shopware/core is pinned to v6.7.10.1.
+
+The task itself mentions 6.7.9.x, so the plugin constraint allows both:
+
+text ~6.7.9 || ~6.7.10 
 
 ## Setup
 
-```bash
-composer install
-php bin/console plugin:refresh
-php bin/console plugin:install --activate WbmProductAttributes
-php bin/console database:migrate WbmProductAttributes --all
-php bin/console cache:clear
-bin/build-administration.sh
-bin/build-storefront.sh
-```
+bash composer install php bin/console plugin:refresh php bin/console plugin:install --activate WbmProductAttributes php bin/console database:migrate WbmProductAttributes --all php bin/console cache:clear bin/build-administration.sh bin/build-storefront.sh 
 
-When Elasticsearch/OpenSearch is enabled, rebuild the product index after installing the plugin:
+If Elasticsearch/OpenSearch is enabled:
 
-```bash
-php bin/console es:index
-```
+bash php bin/console es:index 
 
-In my local run the Docker database was exposed on a random host port, so I used `DATABASE_URL` per command instead of changing the project config. The local PHP memory limit was also too low for Shopware cache warmup, so I used `php -d memory_limit=-1` for console checks.
+In my local setup the Docker database was exposed on a random port, so I used DATABASE_URL inline for some console commands instead of changing the whole environment config.
+
+I also had to increase the PHP memory limit for some Shopware console tasks locally:
+
+bash php -d memory_limit=-1 
 
 ## Approach
 
-I used Shopware custom fields, not a DAL `ProductEntity` extension.
+I decided to use Shopware custom fields instead of building a DAL ProductEntity extension.
 
-For these two values that is the cleaner fit. Product custom fields are already shown in the Administration Specifications tab, are saved through the normal product API, and are part of Shopware's product search configuration. They are also known to the Elasticsearch product mapping when `include_in_search` is enabled.
+For these two fields it felt like the simpler and more practical solution. Shopware already handles product custom fields inside the Specifications tab, persists them through the normal product flow and includes searchable custom fields in the Elasticsearch/OpenSearch mapping.
 
-A separate product extension table would make sense if these API attributes had their own lifecycle, needed relational constraints, or were queried heavily in custom SQL. For the task as given, it would add a lot of plumbing: extension definition, joins, Admin forms, indexing work, and extra persistence code.
+A dedicated extension table would make more sense if the imported API data became more relational or needed stricter validation/reporting. For this task it added more complexity than necessary.
 
-The future note about 50+ API attributes is the main tradeoff. I would not blindly mirror all upstream fields into custom fields. I would keep the set curated. If those 50 fields became more like a structured API payload with reporting requirements, I would revisit the extension-table approach.
+The note about 50+ future API attributes is the main tradeoff here. I would not mirror every upstream field directly into Shopware custom fields forever. If the amount of metadata grows significantly, I would probably revisit a dedicated extension structure later.
 
 ## Implemented
 
-`productIdFromApi`
+### productIdFromApi
 
-Integer custom field. It is attached to products and shown in the Specifications tab. The Admin field config sets it to disabled, so it is readonly in the product detail UI.
+Integer custom field attached to products.
 
-`productFormat`
+- visible in Specifications
+- readonly in the Administration UI
 
-Text custom field for the required string value. It is editable in the product detail Specifications tab and added as a column in `Catalogues > Products`.
+### productFormat
 
-The migration creates one custom field set, relates it to `product`, and upserts both fields. It also adds `customFields.productFormat` to every existing product search config with `searchable = 1`, `tokenize = 1`, and ranking `250`.
+Editable text custom field for values like:
 
-The storefront listing filter is registered through `ProductListingCollectFilterEvent`. It adds a `TermsAggregation` and, when values are selected, an `EqualsAnyFilter` on:
+- Bücher
+- Hörbuch
+- DVD
+- CD-ROM
 
-```text
-product.customFields.productFormat
-```
+The field is:
+- editable in Specifications
+- added as a column in Catalogues > Products
+- included in product search configuration
 
-That keeps it inside Shopware's normal listing criteria flow. In OpenSearch mode, Shopware's criteria parser resolves the custom field path to the translated custom-field mapping.
+The migration creates one custom field set, assigns it to product, creates both fields and updates the product search configuration for:
 
-The Twig part only renders the aggregation buckets using the existing `filter-multi-select` storefront plugin markup. No custom JavaScript was needed.
+text customFields.productFormat 
 
-Search for values like `Bücher` should work after the plugin is installed and the ES index is rebuilt, because `productFormat` is added to the product search config.
+## Storefront Filter
+
+The storefront filter is registered through ProductListingCollectFilterEvent.
+
+It adds:
+- a TermsAggregation
+- an EqualsAnyFilter
+
+for:
+
+text product.customFields.productFormat 
+
+This keeps the filter inside Shopware’s normal listing pipeline and works with Elasticsearch/OpenSearch criteria parsing.
+
+The Twig implementation only renders the aggregation buckets using the existing Shopware multi-select filter structure. No custom JavaScript was added.
+
+Searching for values like Bücher should also return matching products after rebuilding the ES/OpenSearch index.
 
 ## Verification
 
 Static checks:
 
-```bash
-find custom/plugins/WbmProductAttributes -name '*.php' -print -exec php -l {} \;
-composer validate custom/plugins/WbmProductAttributes/composer.json --strict
-php -r '...json_decode snippet files with JSON_THROW_ON_ERROR...'
-php -r '...DOMDocument load services.xml/phpunit.xml.dist...'
-php -r '...MigrationStep::getPlausibleCreationTimestamp()...'
-```
+bash find custom/plugins/WbmProductAttributes -name '*.php' -print -exec php -l {} \; composer validate custom/plugins/WbmProductAttributes/composer.json --strict php -r '...json_decode snippet files with JSON_THROW_ON_ERROR...' php -r '...DOMDocument load services.xml/phpunit.xml.dist...' php -r '...MigrationStep::getPlausibleCreationTimestamp()...' 
 
-Shopware checks run locally:
+Local Shopware checks:
 
-```bash
-php -d memory_limit=-1 bin/console plugin:refresh
-php -d memory_limit=-1 bin/console plugin:install --activate WbmProductAttributes --no-interaction
-php -d memory_limit=-1 bin/console lint:container
-php -d memory_limit=-1 bin/console lint:twig custom/plugins/WbmProductAttributes/src/Resources/views
-php -d memory_limit=-1 bin/console assets:install
-```
+bash php -d memory_limit=-1 bin/console plugin:refresh php -d memory_limit=-1 bin/console plugin:install --activate WbmProductAttributes --no-interaction php -d memory_limit=-1 bin/console lint:container php -d memory_limit=-1 bin/console lint:twig custom/plugins/WbmProductAttributes/src/Resources/views php -d memory_limit=-1 bin/console assets:install 
 
-I also checked the database after installation:
-
+I also checked the database manually after installation:
 - both custom fields exist
-- `productIdFromApi` has `disabled = true` in its config
-- the field set is related to `product`
-- `customFields.productFormat` exists in `product_search_config_field`
+- the field set is assigned to product
+- productIdFromApi is disabled in Administration config
+- customFields.productFormat exists in product_search_config_field
 - the plugin is installed and active
 
-The storefront filter contract was checked with a small PHP script against the real Shopware classes. It verifies that selected values like `Bücher|Hörbuch` become an `EqualsAnyFilter` on `product.customFields.productFormat`.
+The storefront filter behavior was additionally checked with a small PHP script against the actual Shopware classes.
 
 ## Tests
 
-The test scope is deliberately small. This is a timed task, and a big test suite here would be mostly noise.
+The test scope is intentionally small.
 
-The plugin contains PHPUnit tests for:
+This was a timed task, so I focused more on the actual Shopware integration than on building a large automated test setup.
 
-- the migration timestamp, because Shopware rejects timestamps outside the 32-bit range
-- the storefront product format filter construction
+The plugin currently contains PHPUnit tests for:
+- migration timestamp validity
+- storefront filter construction
 
-The root project does not currently install PHPUnit. The plugin declares it as a dev dependency. To run the tests:
+The storefront filter test verifies that selected values create an EqualsAnyFilter for:
 
-```bash
-cd custom/plugins/WbmProductAttributes
-composer install
-../../../vendor/bin/phpunit -c phpunit.xml.dist
-```
+text product.customFields.productFormat 
 
-In a real project, the best next test would be an integration test that boots Shopware, installs the plugin, creates products with `productFormat`, indexes them, and checks the category listing filter. I did not add that here because it depends on a working database and OpenSearch setup and would take the task in the wrong direction.
+In a real project the next step would probably be an integration test that boots Shopware, installs the plugin, indexes products and verifies the storefront listing behavior against a real database and OpenSearch instance.
+
+I did not add that here because the local Docker/OpenSearch setup was unstable during implementation and I preferred prioritizing the plugin itself.
 
 ## Still Open
 
-I did not do a full browser walkthrough of the Administration and Storefront before writing this README. The backend installation and database state were verified, and the Administration/Storefront integration points were checked against the actual Shopware 6.7 source.
+I did not do a full browser walkthrough of the Administration and Storefront before writing this README.
 
-OpenSearch is present in the Docker setup, but the task already noted possible macOS image/storage issues. I kept the implementation ES-compatible and verified the mapping/search-config path, but I did not spend time debugging OpenSearch infrastructure.
+The implementation was mainly verified against:
+- the actual Shopware 6.7 source
+- local installation state
+- database structure
+- console checks
+- filter construction
+
+OpenSearch was present locally but not fully debugged because of Docker/macOS storage issues during setup.
 
 ## Tradeoffs
 
-The product format filter uses the raw string as value and label. That is fine for `Bücher`, `DVD`, `Hörbuch`, etc. It also means inconsistent upstream spelling creates separate filter options.
+The filter currently uses the raw productFormat value as both label and filter value.
 
-`productIdFromApi` is readonly in the Admin UI, not at DAL write level. An API client with product write permissions can still change the custom field. If this value must be protected strictly, I would enforce that in the import process or add a write validator.
+That keeps the implementation small, but inconsistent upstream spelling would create separate filter options.
 
-The custom-field approach keeps the plugin small. The cost is that too many API fields can make the custom-field set and ES mapping messy. That is why I would keep only business-relevant fields here.
+productIdFromApi is readonly in the Administration UI only. API clients with product write permissions could still modify it. In a real project I would probably enforce that closer to the import layer or with write validation depending on the business rules.
+
+The custom-field approach keeps the plugin lightweight, but too many API fields could eventually make the custom-field setup and ES/OpenSearch mapping noisy. That is why I would keep only business-relevant fields in this structure.
 
 ## AI Usage
 
-I used Cursor/ChatGPT for boilerplate and for checking Shopware details quickly. The useful part was looking up the actual 6.7 classes in this repository: the custom field renderer, product listing filters, and Elasticsearch criteria parser.
+I used Cursor and ChatGPT mainly for boilerplate support and for checking Shopware implementation details more quickly.
 
-I reviewed the generated code manually and adjusted it where it did not fit the Shopware codebase.
+The useful part was validating the actual Shopware 6.7 code paths around:
+- custom field rendering
+- product listing filters
+- Elasticsearch/OpenSearch criteria parsing
 
-One suggestion I rejected was building a full DAL product extension with a separate table. It would be defensible for a different data shape, but for this task it added more moving parts than value.
+All generated code was reviewed manually and adjusted where necessary.
 
-## Commit Suggestions
+One suggestion I intentionally rejected was building a dedicated DAL product extension with a separate table. Technically valid, but for this task it added more moving parts than I felt were necessary.
 
-1. `Add WBM product custom fields`
-2. `Add product format admin column`
-3. `Add product format storefront listing filter`
-4. `Add focused plugin tests`
-5. `Document implementation decisions`
+## Suggested Commit Structure
+
+1. Add WBM product custom fields
+2. Add product format admin column
+3. Add storefront product format filter
+4. Add focused plugin tests
+5. Document implementation decisions
+
+❤️ Casian Blanaru
