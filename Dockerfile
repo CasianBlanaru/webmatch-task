@@ -1,3 +1,17 @@
+# Stage 1: Install Composer dependencies
+FROM composer:2 AS vendor
+
+WORKDIR /app
+
+COPY composer.json composer.lock ./
+COPY custom/ custom/
+
+RUN composer install \
+    --no-dev \
+    --prefer-dist \
+    --optimize-autoloader
+
+# Stage 2: Build the final FrankenPHP image
 FROM dunglas/frankenphp:1-php8.4
 
 ENV APP_ENV=prod
@@ -24,11 +38,10 @@ RUN apt-get update && apt-get install -y \
         gd \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-
 RUN a2dismod mpm_prefork mpm_worker mpm_event || true
 
 COPY . .
+COPY --from=vendor /app/vendor ./vendor
 COPY Caddyfile /etc/caddy/Caddyfile
 
 RUN composer install \
