@@ -4,6 +4,10 @@ set -eu
 
 cd /app
 
+mkdir -p var/log
+touch var/log/prod.log
+tail -n 0 -F var/log/*.log &
+
 wait_for_database() {
     if [ -z "${DATABASE_URL:-}" ]; then
         echo "DATABASE_URL is not set"
