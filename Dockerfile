@@ -1,18 +1,5 @@
-# Stage 1: Install Composer dependencies
-FROM composer:2 AS vendor
-
-WORKDIR /app
-
-COPY composer.json composer.lock ./
-COPY custom/ custom/
-
-RUN composer install \
-    --no-dev \
-    --prefer-dist \
-    --optimize-autoloader
-
-# Stage 2: Build the final FrankenPHP image
-FROM dunglas/frankenphp:1-php8.4
+# Stage 1: Shared PHP runtime with required Shopware extensions
+FROM dunglas/frankenphp:1-php8.4 AS base
 
 ENV APP_ENV=prod
 ENV SHOPWARE_SKIP_WEBINSTALLER=1
@@ -24,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     curl \
     zip \
+    jq \
     libicu-dev \
     libzip-dev \
     libpng-dev \
@@ -38,7 +26,27 @@ RUN apt-get update && apt-get install -y \
         gd \
     && rm -rf /var/lib/apt/lists/*
 
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY --from=node:20-bookworm-slim /usr/local/bin/node /usr/local/bin/node
+COPY --from=node:20-bookworm-slim /usr/local/bin/npm /usr/local/bin/npm
+COPY --from=node:20-bookworm-slim /usr/local/bin/npx /usr/local/bin/npx
+COPY --from=node:20-bookworm-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
+
 RUN a2dismod mpm_prefork mpm_worker mpm_event || true
+
+# Stage 2: Install Composer dependencies with the same PHP extensions as runtime
+FROM base AS vendor
+
+COPY composer.json composer.lock ./
+COPY custom/ custom/
+
+RUN composer install \
+    --no-dev \
+    --prefer-dist \
+    --optimize-autoloader
+
+# Stage 3: Build the final FrankenPHP image
+FROM base AS app
 
 COPY . .
 COPY --from=vendor /app/vendor ./vendor
