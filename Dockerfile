@@ -3,6 +3,7 @@ FROM dunglas/frankenphp:1-php8.4 AS base
 
 ENV APP_ENV=prod
 ENV COMPOSER_ALLOW_SUPERUSER=1
+ENV COMPOSER_NO_INTERACTION=1
 ENV SHOPWARE_SKIP_WEBINSTALLER=1
 
 WORKDIR /app
@@ -45,7 +46,8 @@ RUN composer install \
     --no-dev \
     --no-scripts \
     --prefer-dist \
-    --optimize-autoloader
+    --optimize-autoloader \
+    && test -f vendor/autoload_runtime.php
 
 # Stage 3: Build the final FrankenPHP image
 FROM base AS app
@@ -58,7 +60,8 @@ RUN composer install \
     --no-dev \
     --no-scripts \
     --prefer-dist \
-    --optimize-autoloader
+    --optimize-autoloader \
+    && test -f vendor/autoload_runtime.php
 
 RUN php bin/console assets:install
 
