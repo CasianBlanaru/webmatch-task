@@ -63,7 +63,7 @@ RUN composer install \
     --optimize-autoloader \
     && test -f vendor/autoload_runtime.php
 
-RUN php bin/console assets:install
+RUN php -d memory_limit=-1 bin/console assets:install
 
 RUN mkdir -p \
     var/cache \
