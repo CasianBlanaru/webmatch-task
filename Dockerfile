@@ -38,9 +38,12 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 
 COPY . .
 
-RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader \
-    && if [ -f bin/build-administration.sh ]; then bash bin/build-administration.sh; fi \
-    && if [ -f bin/build-storefront.sh ]; then bash bin/build-storefront.sh; fi \
+RUN composer install \
+    --no-dev \
+    --prefer-dist \
+    --no-interaction \
+    --optimize-autoloader \
+    --no-scripts \
     && mkdir -p var/cache var/log public/media public/thumbnail public/bundles public/theme \
     && chown -R www-data:www-data var public
 
