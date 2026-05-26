@@ -2,6 +2,7 @@
 FROM dunglas/frankenphp:1-php8.4 AS base
 
 ENV APP_ENV=prod
+ENV COMPOSER_ALLOW_SUPERUSER=1
 ENV SHOPWARE_SKIP_WEBINSTALLER=1
 
 WORKDIR /app
@@ -42,6 +43,7 @@ COPY custom/ custom/
 
 RUN composer install \
     --no-dev \
+    --no-scripts \
     --prefer-dist \
     --optimize-autoloader
 
