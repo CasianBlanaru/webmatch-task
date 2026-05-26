@@ -1,0 +1,8 @@
+{
+  "wbm-product-attributes": {
+    "listing": {
+      "productFormatFilter": "Product format",
+      "productFormatFilterAriaLabel": "Filter by product format"
+    }
+  }
+}

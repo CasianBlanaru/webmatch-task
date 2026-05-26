@@ -1,0 +1,71 @@
+{% sw_extends '@Storefront/storefront/component/listing/filter-panel.html.twig' %}
+
+{% block component_filter_panel_item_properties %}
+    {{ parent() }}
+
+    {% set productFormats = listing.aggregations.get('wbm-product-format') %}
+
+    {% if productFormats and productFormats.buckets is not empty %}
+        {% set filterItemId = 'filter-product-format-' ~ random() %}
+        {% set displayName = 'wbm-product-attributes.listing.productFormatFilter'|trans|sw_sanitize %}
+        {% set ariaLabel = 'wbm-product-attributes.listing.productFormatFilterAriaLabel'|trans|sw_sanitize %}
+        {% set dataPluginSelectorOptions = {
+            name: 'product-format',
+            displayName: displayName,
+            snippets: {
+                disabledFilterText: 'listing.disabledFilterTooltip'|trans|sw_sanitize,
+                ariaLabel: ariaLabel,
+                ariaLabelCount: 'listing.filterCountAriaLabel'|trans|sw_sanitize
+            }
+        } %}
+
+        {% block wbm_product_attributes_product_format_filter %}
+            <div class="filter-multi-select filter-multi-select-product-format filter-panel-item{% if sidebar %} d-grid{% else %} dropdown{% endif %}"
+                 role="listitem"
+                 data-filter-multi-select="true"
+                 data-filter-multi-select-options='{{ dataPluginSelectorOptions|json_encode }}'>
+
+                <button class="filter-panel-item-toggle btn"
+                        aria-expanded="false"
+                        aria-label="{{ ariaLabel }}"
+                        {% if sidebar %}
+                        data-bs-toggle="collapse"
+                        data-bs-target="#{{ filterItemId }}"
+                        {% else %}
+                        data-bs-toggle="dropdown"
+                        data-boundary="viewport"
+                        data-bs-offset="0,8"
+                        {% endif %}>
+                    {{ displayName }}
+                    <span class="filter-multi-select-count"></span>
+                    {% sw_icon 'arrow-medium-down' style {
+                        'pack': 'solid', 'size': 'xs', 'class': 'filter-panel-item-toggle'
+                    } %}
+                </button>
+
+                <div class="filter-multi-select-dropdown filter-panel-item-dropdown{% if sidebar %} collapse{% else %} dropdown-menu{% endif %}"
+                     id="{{ filterItemId }}">
+                    <ul class="filter-multi-select-list" aria-label="{{ displayName }}">
+                        {% for bucket in productFormats.buckets|sort((a, b) => a.key|lower <=> b.key|lower) %}
+                            {% if bucket.key %}
+                                {% set optionId = 'product-format-' ~ loop.index ~ '-' ~ random() %}
+                                <li class="filter-multi-select-list-item">
+                                    <div class="form-check">
+                                        <input type="checkbox"
+                                               class="form-check-input filter-multi-select-checkbox"
+                                               data-label="{{ bucket.key }}"
+                                               value="{{ bucket.key }}"
+                                               id="{{ optionId }}">
+                                        <label class="filter-multi-select-item-label form-check-label" for="{{ optionId }}">
+                                            {{ bucket.key }}
+                                        </label>
+                                    </div>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        {% endblock %}
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,31 @@
+{
+  "name": "wbm/product-attributes",
+  "description": "Adds WBM product attributes to administration and storefront listings.",
+  "type": "shopware-platform-plugin",
+  "license": "proprietary",
+  "require": {
+    "shopware/core": "~6.7.9 || ~6.7.10",
+    "shopware/storefront": "~6.7.9 || ~6.7.10",
+    "shopware/administration": "~6.7.9 || ~6.7.10"
+  },
+  "autoload": {
+    "psr-4": {
+      "Wbm\\ProductAttributes\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Wbm\\ProductAttributes\\Tests\\": "tests/"
+    }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.5"
+  },
+  "extra": {
+    "shopware-plugin-class": "Wbm\\ProductAttributes\\WbmProductAttributes",
+    "label": {
+      "en-GB": "WBM Product Attributes",
+      "de-DE": "WBM Produktattribute"
+    }
+  }
+}
