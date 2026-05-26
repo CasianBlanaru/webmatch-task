@@ -38,12 +38,19 @@ RUN apt-get update \
         opcache \
         pdo_mysql \
         zip \
-    && a2dismod mpm_event mpm_worker \
-    && a2enmod mpm_prefork \
-    && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 
-# Apache warning fix
+# Apache MPM fix
+RUN a2dismod mpm_event || true
+RUN a2dismod mpm_worker || true
+
+RUN rm -f /etc/apache2/mods-enabled/mpm_event.load
+RUN rm -f /etc/apache2/mods-enabled/mpm_worker.load
+
+RUN a2enmod mpm_prefork
+RUN a2enmod rewrite
+RUN a2enmod headers
+
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 # Composer
@@ -56,7 +63,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && corepack enable \
     && rm -rf /var/lib/apt/lists/*
 
-# Project files
+# Project
 COPY . .
 
 # Composer install
