@@ -1,5 +1,9 @@
 # Shopware 6 / Symfony application served via FrankenPHP
-{$SERVER_NAME:localhost:8080} {
+{
+	auto_https off
+}
+
+:8080 {
 	root * /app/public
 	php_server {
 		index index.php
