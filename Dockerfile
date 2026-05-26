@@ -9,13 +9,13 @@ ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 
 WORKDIR /var/www/html
 
-# Apache -> public/
+# Apache DocumentRoot -> /public
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
     /etc/apache2/sites-available/*.conf \
     /etc/apache2/apache2.conf \
     /etc/apache2/conf-available/*.conf
 
-# PHP + Apache
+# System packages + PHP extensions
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         acl \
@@ -43,6 +43,7 @@ RUN apt-get update \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 
+# Apache warning fix
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 # Composer
@@ -55,7 +56,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && corepack enable \
     && rm -rf /var/lib/apt/lists/*
 
-# Project
+# Project files
 COPY . .
 
 # Composer install
@@ -66,7 +67,7 @@ RUN composer install \
     --optimize-autoloader \
     --no-scripts
 
-# Writable folders
+# Writable directories
 RUN mkdir -p \
     var/cache \
     var/log \
@@ -76,10 +77,10 @@ RUN mkdir -p \
     public/theme \
     && chown -R www-data:www-data var public
 
-# Minimal startup script
+# Start script
 RUN printf '#!/bin/bash\n\
 set -e\n\
-sed -i \"s/Listen 80/Listen ${PORT}/g\" /etc/apache2/ports.conf\n\
+sed -i "s/Listen 80/Listen ${PORT}/g" /etc/apache2/ports.conf\n\
 apache2-foreground\n' > /usr/local/bin/shopware-start \
     && chmod +x /usr/local/bin/shopware-start
 
