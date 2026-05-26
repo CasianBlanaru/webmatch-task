@@ -1,23 +1,10 @@
-FROM php:8.4-apache
+FROM dunglas/frankenphp:1-php8.4
 
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+ENV APP_ENV=prod
+ENV SHOPWARE_SKIP_WEBINSTALLER=1
 
-WORKDIR /var/www/html
+WORKDIR /app
 
-# Apache document root -> public
-RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
-    /etc/apache2/sites-available/*.conf
-
-# Remove conflicting MPM modules
-RUN a2dismod mpm_event || true
-RUN a2dismod mpm_worker || true
-
-# Enable required Apache modules only
-RUN a2enmod rewrite headers
-
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
-
-# PHP dependencies
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -37,20 +24,16 @@ RUN apt-get update && apt-get install -y \
         gd \
     && rm -rf /var/lib/apt/lists/*
 
-# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy app
 COPY . .
 
-# Install PHP deps
 RUN composer install \
     --no-dev \
     --no-scripts \
     --prefer-dist \
     --optimize-autoloader
 
-# Writable directories
 RUN mkdir -p \
     var/cache \
     var/log \
@@ -60,6 +43,6 @@ RUN mkdir -p \
     public/theme \
     && chown -R www-data:www-data var public
 
-EXPOSE 80
+EXPOSE 8080
 
-CMD ["apache2-foreground"]
+CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]
