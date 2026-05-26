@@ -14,12 +14,26 @@ wait_for_database() {
         return 1
     fi
 
+    case "$DATABASE_URL" in
+        *'${{'*|*'}}'*)
+            echo "DATABASE_URL still contains an unresolved Railway variable reference"
+            return 1
+            ;;
+    esac
+
     php <<'PHP'
 <?php
 $url = getenv('DATABASE_URL');
 $parts = parse_url($url);
 $host = $parts['host'] ?? '';
 $port = (int) ($parts['port'] ?? 3306);
+
+if ($host === '') {
+    fwrite(STDERR, "DATABASE_URL does not contain a database host\n");
+    exit(1);
+}
+
+fwrite(STDOUT, sprintf("Checking database %s:%d\n", $host, $port));
 
 for ($attempt = 1; $attempt <= 60; ++$attempt) {
     $socket = @fsockopen($host, $port, $errno, $errstr, 2.0);
