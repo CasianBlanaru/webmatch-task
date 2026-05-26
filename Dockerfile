@@ -9,13 +9,13 @@ ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 
 WORKDIR /var/www/html
 
-# Apache DocumentRoot auf /public setzen
+# Apache -> public/
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
     /etc/apache2/sites-available/*.conf \
     /etc/apache2/apache2.conf \
     /etc/apache2/conf-available/*.conf
 
-# PHP Extensions + Apache Setup
+# PHP + Apache
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         acl \
@@ -43,42 +43,45 @@ RUN apt-get update \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 
-# Apache Warning vermeiden
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Node.js 20 installieren
+# Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get update \
     && apt-get install -y --no-install-recommends nodejs \
     && corepack enable \
     && rm -rf /var/lib/apt/lists/*
 
-# Projekt kopieren
+# Project
 COPY . .
 
-# Composer Install ohne Scripts
+# Composer install
 RUN composer install \
     --no-dev \
     --prefer-dist \
     --no-interaction \
     --optimize-autoloader \
-    --no-scripts \
-    && mkdir -p \
-        var/cache \
-        var/log \
-        public/media \
-        public/thumbnail \
-        public/bundles \
-        public/theme \
+    --no-scripts
+
+# Writable folders
+RUN mkdir -p \
+    var/cache \
+    var/log \
+    public/media \
+    public/thumbnail \
+    public/bundles \
+    public/theme \
     && chown -R www-data:www-data var public
 
-# Start Script
-COPY docker/start.sh /usr/local/bin/shopware-start
-
-RUN chmod +x /usr/local/bin/shopware-start
+# Minimal startup script
+RUN printf '#!/bin/bash\n\
+set -e\n\
+sed -i \"s/Listen 80/Listen ${PORT}/g\" /etc/apache2/ports.conf\n\
+apache2-foreground\n' > /usr/local/bin/shopware-start \
+    && chmod +x /usr/local/bin/shopware-start
 
 EXPOSE 8080
 
