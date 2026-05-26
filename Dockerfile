@@ -33,8 +33,11 @@ COPY Caddyfile /etc/caddy/Caddyfile
 
 RUN composer install \
     --no-dev \
+    --no-scripts \
     --prefer-dist \
     --optimize-autoloader
+
+RUN php bin/console assets:install
 
 RUN mkdir -p \
     var/cache \
