@@ -12,6 +12,8 @@ services:
       DATABASE_URL: mysql://shopware:shopware@db:3306/shopware
       SHOPWARE_ES_ENABLED: 0
       SERVER_NAME: ':8080'
+      FRANKENPHP_NUM_THREADS: '4'
+      PHP_MEMORY_LIMIT: '512M'
     depends_on:
       - db
 
