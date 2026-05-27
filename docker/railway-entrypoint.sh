@@ -53,6 +53,73 @@ exit(1);
 PHP
 }
 
+configure_sales_channel_domain() {
+    if [ -z "${APP_URL:-}" ]; then
+        echo "APP_URL is not set; skipping sales channel domain configuration"
+        return 0
+    fi
+
+    php <<'PHP'
+<?php
+$appUrl = rtrim((string) getenv('APP_URL'), '/');
+$appParts = parse_url($appUrl);
+
+if (!isset($appParts['scheme'], $appParts['host'])) {
+    fwrite(STDERR, "APP_URL must include a scheme and host, for example https://example.com\n");
+    exit(1);
+}
+
+$dsn = (string) getenv('DATABASE_URL');
+$dbParts = parse_url($dsn);
+
+if (!isset($dbParts['scheme'], $dbParts['host'], $dbParts['path'])) {
+    fwrite(STDERR, "DATABASE_URL is not parseable\n");
+    exit(1);
+}
+
+$driver = str_starts_with($dbParts['scheme'], 'mysql') || str_starts_with($dbParts['scheme'], 'mariadb') ? 'mysql' : $dbParts['scheme'];
+$database = ltrim($dbParts['path'], '/');
+$port = (int) ($dbParts['port'] ?? 3306);
+$user = rawurldecode((string) ($dbParts['user'] ?? ''));
+$pass = rawurldecode((string) ($dbParts['pass'] ?? ''));
+
+$pdo = new PDO(
+    sprintf('%s:host=%s;port=%d;dbname=%s;charset=utf8mb4', $driver, $dbParts['host'], $port, $database),
+    $user,
+    $pass,
+    [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+);
+
+$domains = $pdo->query("SELECT LOWER(HEX(id)) AS id, url FROM sales_channel_domain WHERE url NOT LIKE 'default.headless%' ORDER BY url")->fetchAll(PDO::FETCH_ASSOC);
+
+foreach ($domains as $domain) {
+    $parts = parse_url($domain['url']);
+
+    if ($parts === false) {
+        continue;
+    }
+
+    $path = $parts['path'] ?? '';
+    $query = isset($parts['query']) ? '?' . $parts['query'] : '';
+    $fragment = isset($parts['fragment']) ? '#' . $parts['fragment'] : '';
+    $port = isset($appParts['port']) ? ':' . $appParts['port'] : '';
+    $newUrl = $appParts['scheme'] . '://' . $appParts['host'] . $port . $path . $query . $fragment;
+
+    if ($newUrl === $domain['url']) {
+        continue;
+    }
+
+    $statement = $pdo->prepare('UPDATE sales_channel_domain SET url = :url WHERE id = UNHEX(:id)');
+    $statement->execute([
+        'url' => $newUrl,
+        'id' => $domain['id'],
+    ]);
+
+    fwrite(STDOUT, sprintf("Updated sales channel domain %s to %s\n", $domain['url'], $newUrl));
+}
+PHP
+}
+
 initialize_shopware() {
     wait_for_database || return 1
 
@@ -73,6 +140,7 @@ initialize_shopware() {
     fi
 
     php -d memory_limit=-1 bin/console database:migrate --all --no-interaction
+    configure_sales_channel_domain
     php -d memory_limit=-1 bin/console plugin:refresh --no-interaction
     php -d memory_limit=-1 bin/console plugin:install --activate WbmProductAttributes --no-interaction \
         || php -d memory_limit=-1 bin/console plugin:activate WbmProductAttributes --no-interaction \
