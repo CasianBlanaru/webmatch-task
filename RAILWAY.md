@@ -28,6 +28,7 @@ APP_SECRET=change-me
 DATABASE_URL=mysql://root:password@host:3306/shopware
 MAILER_DSN=null://null
 SHOPWARE_ES_ENABLED=0
+SYMFONY_TRUSTED_PROXIES=private_ranges
 ```
 
 ## Deploy Steps
