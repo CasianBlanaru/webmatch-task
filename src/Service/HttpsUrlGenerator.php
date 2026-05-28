@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Routing\RequestContext;
 
 /**
  * Decorates Shopware's router service to ensure every absolute URL it generates
@@ -20,6 +21,16 @@ class HttpsUrlGenerator implements UrlGeneratorInterface
 {
     public function __construct(private readonly UrlGeneratorInterface $inner)
     {
+    }
+
+    public function setContext(RequestContext $context): void
+    {
+        $this->inner->setContext($context);
+    }
+
+    public function getContext(): RequestContext
+    {
+        return $this->inner->getContext();
     }
 
     public function generate(string $name, array $parameters = [], int $referenceType = self::ABSOLUTE_PATH): string
