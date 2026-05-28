@@ -25,3 +25,8 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
+
+    App\Service\HttpsUrlGenerator:
+        decorates: 'router'
+        arguments:
+            $inner: '@App\Service\HttpsUrlGenerator.inner'
