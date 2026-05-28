@@ -13,6 +13,9 @@
 	header {
 		X-Content-Type-Options nosniff
 		X-Frame-Options SAMEORIGIN
+		X-Forwarded-Proto https
+		X-Forwarded-Host {http.request.host}
+		X-Real-IP {http.request.remote.host}
 		-Server
 	}
 	handle_errors {
