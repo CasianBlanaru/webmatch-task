@@ -146,6 +146,14 @@ initialize_shopware() {
         || php -d memory_limit=-1 bin/console plugin:activate WbmProductAttributes --no-interaction \
         || true
     php -d memory_limit=-1 bin/console database:migrate WbmProductAttributes --all --no-interaction || true
+
+    # Remove compiled administration bundles to force rebuild with correct URLs
+    rm -rf /app/public/bundles/administration || true
+
+    # Rebuild assets and themes with correct HTTPS URLs
+    php -d memory_limit=-1 bin/console assets:install --no-interaction || true
+    php -d memory_limit=-1 bin/console theme:compile --no-interaction || true
+
     php -d memory_limit=-1 bin/console cache:clear --no-interaction || true
     php -d memory_limit=-1 bin/console assets:install --no-interaction || true
     php -d memory_limit=-1 bin/console theme:compile --no-interaction || true
