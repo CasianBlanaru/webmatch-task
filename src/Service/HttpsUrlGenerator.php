@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use Symfony\Component\HttpKernel\CacheWarmer\WarmableInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Routing\RequestContext;
 
@@ -17,7 +18,7 @@ use Symfony\Component\Routing\RequestContext;
  * This decorator intercepts every call to generate() and rewrites the scheme for
  * absolute URLs before they are returned to the caller.
  */
-class HttpsUrlGenerator implements UrlGeneratorInterface
+class HttpsUrlGenerator implements UrlGeneratorInterface, WarmableInterface
 {
     public function __construct(private readonly UrlGeneratorInterface $inner)
     {
@@ -43,5 +44,19 @@ class HttpsUrlGenerator implements UrlGeneratorInterface
         }
 
         return $url;
+    }
+
+    /**
+     * Delegates cache warming to the inner router if it supports it.
+     *
+     * @return string[] List of classes to preload, as returned by the inner router.
+     */
+    public function warmUp(string $cacheDir, ?string $buildDir = null): array
+    {
+        if ($this->inner instanceof WarmableInterface) {
+            return $this->inner->warmUp($cacheDir, $buildDir);
+        }
+
+        return [];
     }
 }
