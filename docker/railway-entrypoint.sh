@@ -90,7 +90,15 @@ $pdo = new PDO(
     [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
 );
 
-$domains = $pdo->query("SELECT LOWER(HEX(id)) AS id, url FROM sales_channel_domain WHERE url NOT LIKE 'default.headless%' ORDER BY url")->fetchAll(PDO::FETCH_ASSOC);
+$domains = $pdo->query("
+    SELECT LOWER(HEX(sales_channel_domain.id)) AS id, sales_channel_domain.url
+    FROM sales_channel_domain
+    INNER JOIN sales_channel ON sales_channel.id = sales_channel_domain.sales_channel_id
+    INNER JOIN sales_channel_type ON sales_channel_type.id = sales_channel.type_id
+    WHERE sales_channel_type.icon_name = 'regular-storefront'
+      AND sales_channel_domain.url NOT LIKE '%default.headless%'
+    ORDER BY sales_channel_domain.url
+")->fetchAll(PDO::FETCH_ASSOC);
 
 foreach ($domains as $domain) {
     $parts = parse_url($domain['url']);

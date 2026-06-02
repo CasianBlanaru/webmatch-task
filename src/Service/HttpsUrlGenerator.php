@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Service;
 
 use Symfony\Component\HttpKernel\CacheWarmer\WarmableInterface;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Routing\RequestContext;
+use Symfony\Component\Routing\RouteCollection;
+use Symfony\Component\Routing\RouterInterface;
 
 /**
  * Decorates Shopware's router service to ensure every absolute URL it generates
@@ -18,9 +19,9 @@ use Symfony\Component\Routing\RequestContext;
  * This decorator intercepts every call to generate() and rewrites the scheme for
  * absolute URLs before they are returned to the caller.
  */
-class HttpsUrlGenerator implements UrlGeneratorInterface, WarmableInterface
+class HttpsUrlGenerator implements RouterInterface, WarmableInterface
 {
-    public function __construct(private readonly UrlGeneratorInterface $inner)
+    public function __construct(private readonly RouterInterface $inner)
     {
     }
 
@@ -44,6 +45,16 @@ class HttpsUrlGenerator implements UrlGeneratorInterface, WarmableInterface
         }
 
         return $url;
+    }
+
+    public function match(string $pathinfo): array
+    {
+        return $this->inner->match($pathinfo);
+    }
+
+    public function getRouteCollection(): RouteCollection
+    {
+        return $this->inner->getRouteCollection();
     }
 
     /**
