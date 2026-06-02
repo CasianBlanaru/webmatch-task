@@ -99,6 +99,7 @@ $domains = $pdo->query("
       AND sales_channel_domain.url NOT LIKE '%default.headless%'
     ORDER BY sales_channel_domain.url
 ")->fetchAll(PDO::FETCH_ASSOC);
+$existingUrls = array_column($domains, 'url');
 
 foreach ($domains as $domain) {
     $parts = parse_url($domain['url']);
@@ -117,11 +118,17 @@ foreach ($domains as $domain) {
         continue;
     }
 
+    if (in_array($newUrl, $existingUrls, true)) {
+        fwrite(STDOUT, sprintf("Sales channel domain %s already exists; keeping %s\n", $newUrl, $domain['url']));
+        continue;
+    }
+
     $statement = $pdo->prepare('UPDATE sales_channel_domain SET url = :url WHERE id = UNHEX(:id)');
     $statement->execute([
         'url' => $newUrl,
         'id' => $domain['id'],
     ]);
+    $existingUrls[] = $newUrl;
 
     fwrite(STDOUT, sprintf("Updated sales channel domain %s to %s\n", $domain['url'], $newUrl));
 }
