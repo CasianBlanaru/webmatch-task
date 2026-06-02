@@ -7,6 +7,7 @@
 .env.*.local
 /public/bundles/*
 /public/media/*
+!/public/media/wbm-demo-logo.svg
 /public/theme/*
 /public/thumbnail/*
 /public/sitemap/*

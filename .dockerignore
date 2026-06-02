@@ -2,7 +2,8 @@ vendor
 node_modules
 var/cache
 var/log
-public/media
+public/media/*
+!public/media/wbm-demo-logo.svg
 public/thumbnail
 .git
 .github

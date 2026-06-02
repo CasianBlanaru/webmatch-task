@@ -9,6 +9,21 @@ The task itself mentions 6.7.9.x, so the plugin constraint allows both:
 
 text ~6.7.9 || ~6.7.10 
 
+## Production Demo
+
+Storefront:
+https://webmatch-task-production.up.railway.app/
+
+Administration:
+https://webmatch-task-production.up.railway.app/admin
+
+Admin login:
+
+- Username: admin
+- Password: WebmatchDemo2026!
+
+The production demo contains dummy products for testing the product format filter and search.
+
 ## Setup
 
 bash composer install php bin/console plugin:refresh php bin/console plugin:install --activate WbmProductAttributes php bin/console database:migrate WbmProductAttributes --all php bin/console cache:clear bin/build-administration.sh bin/build-storefront.sh 
