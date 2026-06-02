@@ -34,15 +34,6 @@ class HttpsUrlGenerator implements UrlGeneratorInterface, WarmableInterface
         return $this->inner->getContext();
     }
 
-    public function warmUp(string $cacheDir): array
-    {
-        if ($this->inner instanceof WarmableInterface) {
-            return $this->inner->warmUp($cacheDir);
-        }
-
-        return [];
-    }
-
     public function generate(string $name, array $parameters = [], int $referenceType = self::ABSOLUTE_PATH): string
     {
         $url = $this->inner->generate($name, $parameters, $referenceType);
