@@ -54,4 +54,18 @@ class HttpsUrlGenerator implements UrlGeneratorInterface, WarmableInterface
 
         return $url;
     }
+
+    /**
+     * Delegates cache warming to the inner router if it supports it.
+     *
+     * @return string[] List of classes to preload, as returned by the inner router.
+     */
+    public function warmUp(string $cacheDir, ?string $buildDir = null): array
+    {
+        if ($this->inner instanceof WarmableInterface) {
+            return $this->inner->warmUp($cacheDir, $buildDir);
+        }
+
+        return [];
+    }
 }
